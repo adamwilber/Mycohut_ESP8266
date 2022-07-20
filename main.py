@@ -40,7 +40,7 @@ GPIO.output(RELAY3, GPIO.HIGH)
 mydb = mysql.connector.connect(
     host="localhost",
     user="db_user",
-    password="ShinjoStadium",
+    password="SQLPASSWORD",
     database="main"
 )
 mycursor = mydb.cursor()
