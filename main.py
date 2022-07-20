@@ -17,7 +17,7 @@ dist = 6  ### test variable - see above
 i = 0  ### Increment variable
 
 ### User variables
-SETHIHUM = 93  ### Humidity at which the atomizer stops
+SETHIHUM = 95  ### Humidity at which the atomizer stops
 SETLOWHUM = 83  ### Humidity at which the atomizer starts
 LOWH2O = 15  ### Water level to send alert
 
