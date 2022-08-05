@@ -1,9 +1,9 @@
 ### Set grow parameters
 ### Humidity level at which the fogger turns on
-SETLOWHUM = 75
+SETLOWHUM = 61
 
 ### Humidity level at which the fogger turns off
-SETHIGHHUM = 93
+SETHIGHHUM = 62
 
 from machine import Pin, I2C
 import dht
@@ -34,17 +34,16 @@ while 1 == 1:
   TEMP = TEMP * 1.8 + 32
 
   ### Clear screen then display temp and humidity to OLED screen
-  ### Turn on fog relay (just for testing)
-  FOGRELAY.value(0)
+  ### Turn on and off fog relay based on humidity
+  if HUMIDITY >= SETHIGHHUM:
+    FOGRELAY.value(0)  #Turn on fog relay
+  if HUMIDITY <= SETLOWHUM:
+    FOGRELAY.value(1) #Turn off fog relay
   oled.fill(0)
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
   oled.text('Temp: {}F'.format(TEMP), 0, 20)
   oled.text('RH:  {}%'.format(HUMIDITY), 0, 30)
   oled.show()
-  sleep(5)
-  ###Turn off fog relay ### just for testing 
-  FOGRELAY.value(1)
-  sleep(3)
-
+  sleep(10)
 
