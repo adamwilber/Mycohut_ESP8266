@@ -16,6 +16,9 @@ sensor = dht.DHT22(Pin(14))
 ### Fog relay pin assignment
 FOGRELAY = Pin(3, Pin.OUT)
 
+### Fan relay pin assignment
+FANRELAY = Pin(15, Pin.OUT)
+
 ### ESP32 Pin assignment
 i2c = I2C(scl=Pin(5), sda=Pin(4))
 
@@ -37,8 +40,10 @@ while 1 == 1:
   ### Turn on and off fog relay based on humidity
   if HUMIDITY >= SETHIGHHUM:
     FOGRELAY.value(0)  #Turn on fog relay
+    FANRELAY.value(0)  # Turn on fan relay
   if HUMIDITY <= SETLOWHUM:
     FOGRELAY.value(1) #Turn off fog relay
+    FANRELAY.value(1) # Turn off fan relay
   oled.fill(0)
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
