@@ -8,7 +8,15 @@ SETHIGHHUM = 62
 from machine import Pin, I2C
 import dht
 import ssd1306
+import network
 from time import sleep
+
+### Some delay to allow aquisition of IP
+sleep(10)
+
+### Get IP address and set to variable
+sta_if = network.WLAN(network.STA_IF)
+IP = sta_if.ifconfig()[0]
 
 ### Sensor Pin assignment
 sensor = dht.DHT22(Pin(14))
@@ -48,7 +56,8 @@ while 1 == 1:
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
   oled.text('Temp: {}F'.format(TEMP), 0, 20)
-  oled.text('RH:  {}%'.format(HUMIDITY), 0, 30)
+  oled.text('RH: {}%'.format(HUMIDITY), 0, 30)
+  oled.text('IP: {}'.format(IP), 0, 40)
   oled.show()
   sleep(10)
 
