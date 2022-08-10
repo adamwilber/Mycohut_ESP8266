@@ -10,6 +10,9 @@ import dht
 import ssd1306
 import network
 from time import sleep
+import time
+import ntptime
+import utime
 
 ### Some delay to allow aquisition of IP
 sleep(10)
@@ -36,6 +39,16 @@ oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
 ### Main loop
 while 1 == 1:
+
+  # Get current time from internet
+  try:
+    ntptime.settime()
+  except:
+    print('error setting time')
+
+  # Unpack time into variables
+  year, month, day, hour, minute, second, ms, dayinyear = utime.localtime()
+
   ### Take measurements from DHT22 sensor
   sensor.measure()
   HUMIDITY = sensor.humidity()
