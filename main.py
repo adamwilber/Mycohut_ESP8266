@@ -66,7 +66,8 @@ while 1 == 1:
 
   # Unpack time into variables
   year, month, day, hour, minute, second, ms, dayinyear = utime.localtime()
-  now = str(hour) + str(minute)
+  NOW = str(hour) + str(minute)
+  NOWSECONDS = str(hour) + ":" + str(minute) + ":" + str(second)
 
   ### Take measurements from DHT22 sensor
   sensor.measure()
@@ -86,13 +87,13 @@ while 1 == 1:
     FANRELAY.value(1) # Turn off fan relay
 
   ### Turn lights on or off based on time set above
-  if (int(now) > LIGHTSONTIME AND int(now) < LIGHTSOFFTIME):
+  if (int(NOW) > LIGHTSONTIME) and (int(NOW) < LIGHTSOFFTIME):
     LEDRELAY.value(0) # Turn on LED relay
   else:
     LEDRELAY.value(1) # Turn off LED relay
 
   ### Turn UV sterilizer on or off based on time set above
-  if (int(now) > UVONTIME AND int(now) < UVOFFTIME):
+  if (int(NOW) > UVONTIME) and (int(NOW) < UVOFFTIME):
     UVRELAY.value(0) # Turn on LED relay
   else:
     UVRELAY.value(1) # Turn off LED relay
@@ -105,6 +106,7 @@ while 1 == 1:
   oled.text('Temp: {}F'.format(TEMP), 0, 20)
   oled.text('RH: {}%'.format(HUMIDITY), 0, 30)
   oled.text('IP: {}'.format(IP), 0, 40)
+  oled.text('Time: {}'.format(NOWSECONDS), 0, 50)
   oled.show()
   sleep(10)
 
