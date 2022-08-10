@@ -5,6 +5,18 @@ SETLOWHUM = 61
 ### Humidity level at which the fogger turns off
 SETHIGHHUM = 62
 
+### Set time for lights to turn on.  Format is 24hr clock hhmm in GMT
+LIGHTSONTIME = 0800
+
+### Set time for lights to turn off.  Format is 24hr clock hhmm in GMT
+LIGHTSOFFTIME = 2000
+
+### Set time for UV sterilizer to turn on.  Format is 24hr clock hhmm in GMT
+UVONTIME = 2000
+
+### Set time for UV sterilizer to turn off.   Format is 24hr clock hhmm in GMT
+UVOFFTIME = 2200
+
 from machine import Pin, I2C
 import dht
 import ssd1306
@@ -30,6 +42,12 @@ FOGRELAY = Pin(3, Pin.OUT)
 ### Fan relay pin assignment
 FANRELAY = Pin(15, Pin.OUT)
 
+### LED Light relay pin assignment
+LEDRELAY = Pin(13, Pin.OUT)
+
+### UV Light realy pin assignment
+UVRELAY = Pin(12, Pin.OUT)
+
 ### ESP32 Pin assignment
 i2c = I2C(scl=Pin(5), sda=Pin(4))
 
@@ -48,6 +66,7 @@ while 1 == 1:
 
   # Unpack time into variables
   year, month, day, hour, minute, second, ms, dayinyear = utime.localtime()
+  now = str(hour) + str(minute)
 
   ### Take measurements from DHT22 sensor
   sensor.measure()
@@ -60,11 +79,26 @@ while 1 == 1:
   ### Clear screen then display temp and humidity to OLED screen
   ### Turn on and off fog relay based on humidity
   if HUMIDITY >= SETHIGHHUM:
-    FOGRELAY.value(0)  #Turn on fog relay
+    FOGRELAY.value(0)  # Turn on fog relay
     FANRELAY.value(0)  # Turn on fan relay
   if HUMIDITY <= SETLOWHUM:
-    FOGRELAY.value(1) #Turn off fog relay
+    FOGRELAY.value(1) # Turn off fog relay
     FANRELAY.value(1) # Turn off fan relay
+
+  ### Turn lights on or off based on time set above
+  if (int(now) > LIGHTSONTIME AND int(now) < LIGHTSOFFTIME):
+    LEDRELAY.value(0) # Turn on LED relay
+  else:
+    LEDRELAY.value(1) # Turn off LED relay
+
+  ### Turn UV sterilizer on or off based on time set above
+  if (int(now) > UVONTIME AND int(now) < UVOFFTIME):
+    UVRELAY.value(0) # Turn on LED relay
+  else:
+    UVRELAY.value(1) # Turn off LED relay
+
+
+  ### Display info on OLED screen
   oled.fill(0)
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
