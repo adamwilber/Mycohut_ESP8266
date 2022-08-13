@@ -1,13 +1,23 @@
+from machine import Pin, I2C
+import dht
+import ssd1306
+import network
+from time import sleep
+import time
+import ntptime
+import utime
+
+
 ### Set timezone offset
 TIMEOFFSET = -5
 TIMEOFFSET = TIMEOFFSET * 60 * 60
 
 ### Set grow parameters
 ### Humidity level at which the fogger turns on
-SETLOWHUM = 61
+SETLOWHUM = 80
 
 ### Humidity level at which the fogger turns off
-SETHIGHHUM = 62
+SETHIGHHUM = 90
 
 ### Set time for lights to turn on.  Format is 24hr clock hhmm in GMT
 LIGHTSONTIME = 0900
@@ -20,15 +30,6 @@ UVONTIME = 0900
 
 ### Set time for UV sterilizer to turn off.   Format is 24hr clock hhmm in GMT
 UVOFFTIME = 1100
-
-from machine import Pin, I2C
-import dht
-import ssd1306
-import network
-from time import sleep
-import time
-import ntptime
-import utime
 
 ### Some delay to allow aquisition of IP
 sleep(10)
@@ -89,11 +90,11 @@ while 1 == 1:
   ### Clear screen then display temp and humidity to OLED screen
   ### Turn on and off fog relay based on humidity
   if HUMIDITY >= SETHIGHHUM:
-    FOGRELAY.value(0)  # Turn on fog relay
-    FANRELAY.value(0)  # Turn on fan relay
+    FOGRELAY.value(1)  # Turn off fog relay
+    FANRELAY.value(1)  # Turn off fan relay
   if HUMIDITY <= SETLOWHUM:
-    FOGRELAY.value(1) # Turn off fog relay
-    FANRELAY.value(1) # Turn off fan relay
+    FOGRELAY.value(0) # Turn on fog relay
+    FANRELAY.value(0) # Turn on fan relay
 
   ### Turn lights on or off based on time set above
   if (int(NOW) > LIGHTSONTIME) and (int(NOW) < LIGHTSOFFTIME):
