@@ -1,3 +1,7 @@
+### Set timezone offset
+TIMEOFFSET = -5
+TIMEOFFSET = TIMEOFFSET * 60 * 60
+
 ### Set grow parameters
 ### Humidity level at which the fogger turns on
 SETLOWHUM = 61
@@ -6,16 +10,16 @@ SETLOWHUM = 61
 SETHIGHHUM = 62
 
 ### Set time for lights to turn on.  Format is 24hr clock hhmm in GMT
-LIGHTSONTIME = 0800
+LIGHTSONTIME = 0900
 
 ### Set time for lights to turn off.  Format is 24hr clock hhmm in GMT
-LIGHTSOFFTIME = 2000
+LIGHTSOFFTIME = 2100
 
 ### Set time for UV sterilizer to turn on.  Format is 24hr clock hhmm in GMT
-UVONTIME = 2000
+UVONTIME = 0900
 
 ### Set time for UV sterilizer to turn off.   Format is 24hr clock hhmm in GMT
-UVOFFTIME = 2200
+UVOFFTIME = 1100
 
 from machine import Pin, I2C
 import dht
@@ -65,7 +69,12 @@ while 1 == 1:
     print('error setting time')
 
   # Unpack time into variables
-  year, month, day, hour, minute, second, ms, dayinyear = utime.localtime()
+  year, month, day, hour, minute, second, ms, dayinyear = utime.localtime(time.time() + TIMEOFFSET)
+
+  ### Formatting correction
+  if len(str(minute)) == 1:
+    minute = "0" + str(minute)
+
   NOW = str(hour) + str(minute)
   NOWSECONDS = str(hour) + ":" + str(minute) + ":" + str(second)
 
