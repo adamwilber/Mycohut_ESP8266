@@ -9,27 +9,27 @@ import utime
 
 
 ### Set timezone offset
-TIMEOFFSET = -5
-TIMEOFFSET = TIMEOFFSET * 60 * 60
+time_offset = -5
+time_offset = time_offset * 60 * 60
 
 ### Set grow parameters
-### Humidity level at which the fogger turns on
-SETLOWHUM = 80
+### humidity level at which the fogger turns on
+set_low_hum = 80
 
-### Humidity level at which the fogger turns off
-SETHIGHHUM = 90
+### humidity level at which the fogger turns off
+set_high_hum = 90
 
-### Set time for lights to turn on.  Format is 24hr clock hhmm in GMT
-LIGHTSONTIME = 0900
+### Set time for lights to turn on.  
+lights_on_hour = 9
 
-### Set time for lights to turn off.  Format is 24hr clock hhmm in GMT
-LIGHTSOFFTIME = 2100
+### Set time for lights to turn off.  
+lights_off_hour = 21
 
-### Set time for UV sterilizer to turn on.  Format is 24hr clock hhmm in GMT
-UVONTIME = 0900
+### Set time for UV sterilizer to turn on.  
+uv_on_hour = 9
 
-### Set time for UV sterilizer to turn off.   Format is 24hr clock hhmm in GMT
-UVOFFTIME = 1100
+### Set time for UV sterilizer to turn off.   
+uv_off_hour = 11
 
 ### Some delay to allow aquisition of IP
 sleep(10)
@@ -42,16 +42,16 @@ IP = sta_if.ifconfig()[0]
 sensor = dht.DHT22(Pin(14))
 
 ### Fog relay pin assignment
-FOGRELAY = Pin(3, Pin.OUT)
+fog_relay = Pin(3, Pin.OUT)
 
 ### Fan relay pin assignment
-FANRELAY = Pin(15, Pin.OUT)
+fan_relay = Pin(15, Pin.OUT)
 
 ### LED Light relay pin assignment
-LEDRELAY = Pin(13, Pin.OUT)
+led_relay = Pin(13, Pin.OUT)
 
 ### UV Light realy pin assignment
-UVRELAY = Pin(12, Pin.OUT)
+uv_relay = Pin(12, Pin.OUT)
 
 ### ESP32 Pin assignment
 i2c = I2C(scl=Pin(5), sda=Pin(4))
@@ -66,57 +66,60 @@ while 1 == 1:
   # Get current time from internet
   try:
     ntptime.settime()
-  except:
+  except Exception as e:
     print('error setting time')
 
   # Unpack time into variables
-  year, month, day, hour, minute, second, ms, dayinyear = utime.localtime(time.time() + TIMEOFFSET)
+  year, month, day, hour, minute, second, ms, dayinyear = utime.gmtime(time.time() + time_offset)
+  print(hour,minute)  ### for testing, can remove
 
-  ### Formatting correction
-  if len(str(minute)) == 1:
-    minute = "0" + str(minute)
 
-  NOW = str(hour) + str(minute)
-  NOWSECONDS = str(hour) + ":" + str(minute) + ":" + str(second)
+
+  # now = str(hour) + str(minute)
+
 
   ### Take measurements from DHT22 sensor
   sensor.measure()
-  HUMIDITY = sensor.humidity()
-  TEMP = sensor.temperature()
-  
+  humidity = sensor.humidity()
+  temp = sensor.temperature()
+
   ### Convert temp to F
-  TEMP = TEMP * 1.8 + 32
+  temp = temp * 1.8 + 32
 
   ### Clear screen then display temp and humidity to OLED screen
   ### Turn on and off fog relay based on humidity
-  if HUMIDITY >= SETHIGHHUM:
-    FOGRELAY.value(1)  # Turn off fog relay
-    FANRELAY.value(1)  # Turn off fan relay
-  if HUMIDITY <= SETLOWHUM:
-    FOGRELAY.value(0) # Turn on fog relay
-    FANRELAY.value(0) # Turn on fan relay
+  if humidity >= set_high_hum:
+    fog_relay.value(1)  # Turn off fog relay
+    fan_relay.value(1)  # Turn off fan relay
+  if humidity <= set_low_hum:
+    fog_relay.value(0) # Turn on fog relay
+    fan_relay.value(0) # Turn on fan relay
 
   ### Turn lights on or off based on time set above
-  if (int(NOW) > LIGHTSONTIME) and (int(NOW) < LIGHTSOFFTIME):
-    LEDRELAY.value(0) # Turn on LED relay
+  if (hour >= lights_on_hour) and (hour < lights_off_hour):
+    led_relay.value(0) # Turn on LED relay
   else:
-    LEDRELAY.value(1) # Turn off LED relay
+    led_relay.value(1) # Turn off LED relay
 
   ### Turn UV sterilizer on or off based on time set above
-  if (int(NOW) > UVONTIME) and (int(NOW) < UVOFFTIME):
-    UVRELAY.value(0) # Turn on LED relay
+  if (hour >= uv_on_hour) and (hour < uv_off_hour):
+    uv_relay.value(0) # Turn on LED relay
   else:
-    UVRELAY.value(1) # Turn off LED relay
+    uv_relay.value(1) # Turn off LED relay
 
+  ### Formatting correction for display
+  if len(str(minute)) == 1:
+    minute = "0" + str(minute)
+  nowseconds = str(hour) + ":" + str(minute) + ":" + str(second)
 
   ### Display info on OLED screen
   oled.fill(0)
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
-  oled.text('Temp: {}F'.format(TEMP), 0, 20)
-  oled.text('RH: {}%'.format(HUMIDITY), 0, 30)
+  oled.text('Temp: {}F'.format(temp), 0, 20)
+  oled.text('RH: {}%'.format(humidity), 0, 30)
   oled.text('IP: {}'.format(IP), 0, 40)
-  oled.text('Time: {}'.format(NOWSECONDS), 0, 50)
+  oled.text('Time: {}'.format(nowseconds), 0, 50)
   oled.show()
   sleep(10)
 
