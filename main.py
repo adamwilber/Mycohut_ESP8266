@@ -60,10 +60,9 @@ oled_width = 128
 oled_height = 64
 oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
-### Main loop
-while 1 == 1:
-
-  # Get current time from internet
+def getTime():
+  global nowseconds
+    # Get current time from internet
   try:
     ntptime.settime()
   except Exception as e:
@@ -72,54 +71,79 @@ while 1 == 1:
   # Unpack time into variables
   year, month, day, hour, minute, second, ms, dayinyear = utime.gmtime(time.time() + time_offset)
   print(hour,minute)  ### for testing, can remove
+    ### Formatting correction for display
+  if len(str(minute)) == 1:
+    minute = "0" + str(minute)
+  nowseconds = str(hour) + ":" + str(minute) + ":" + str(second)
+  return hour
 
-
-
-  # now = str(hour) + str(minute)
-
-
-  ### Take measurements from DHT22 sensor
+def readSensor():
+  global temp
+  global humidity
+  global sensor
   sensor.measure()
   humidity = sensor.humidity()
-  temp = sensor.temperature()
+  temp = sensor.temperature() * 1.8 + 32
 
-  ### Convert temp to F
-  temp = temp * 1.8 + 32
-
-  ### Clear screen then display temp and humidity to OLED screen
-  ### Turn on and off fog relay based on humidity
-  if humidity >= set_high_hum:
-    fog_relay.value(1)  # Turn off fog relay
-    fan_relay.value(1)  # Turn off fan relay
-  if humidity <= set_low_hum:
+def cycleHumidifier(status):
+  global fog_relay
+  global fan_relay
+  if(status):
     fog_relay.value(0) # Turn on fog relay
     fan_relay.value(0) # Turn on fan relay
-
-  ### Turn lights on or off based on time set above
-  if (hour >= lights_on_hour) and (hour < lights_off_hour):
-    led_relay.value(0) # Turn on LED relay
   else:
-    led_relay.value(1) # Turn off LED relay
+    fog_relay.value(1)  # Turn off fog relay
+    fan_relay.value(1)  # Turn off fan relay
 
-  ### Turn UV sterilizer on or off based on time set above
-  if (hour >= uv_on_hour) and (hour < uv_off_hour):
+def cycleSanitizer(status):
+  global uv_relay
+  ### Turn lights on or off based on time set above
+  if(status):
     uv_relay.value(0) # Turn on LED relay
   else:
     uv_relay.value(1) # Turn off LED relay
 
-  ### Formatting correction for display
-  if len(str(minute)) == 1:
-    minute = "0" + str(minute)
-  nowseconds = str(hour) + ":" + str(minute) + ":" + str(second)
+def cycleLights(status):
+  global led_relay
+  if(status):
+    led_relay.value(0)
+  else:
+    led_relay.value(1)
 
+
+def writeToLCD(tmep, hum, addr, time):
   ### Display info on OLED screen
   oled.fill(0)
   oled.show()
   oled.text('MycoHut', 0, 0, 16)
   oled.text('Temp: {}F'.format(temp), 0, 20)
-  oled.text('RH: {}%'.format(humidity), 0, 30)
-  oled.text('IP: {}'.format(IP), 0, 40)
-  oled.text('Time: {}'.format(nowseconds), 0, 50)
+  oled.text('RH: {}%'.format(hum), 0, 30)
+  oled.text('IP: {}'.format(addr), 0, 40)
+  oled.text('Time: {}'.format(time), 0, 50)
   oled.show()
-  sleep(10)
 
+
+### Main loop
+while 1 == 1:
+  hour = getTime()
+  readSensor()
+  ### Turn on and off fog relay based on humidity
+  if humidity >= set_high_hum:
+    cycleHumidifier(True)
+  if humidity <= set_low_hum:
+    cycleHumidifier(False)
+
+  ### Turn lights on or off based on time set above
+  if (hour >= lights_on_hour) and (hour < lights_off_hour):
+        cycleLights(True)
+  else:
+    cycleLights(False)
+
+  ### Turn UV sterilizer on or off based on time set above
+  if (hour >= uv_on_hour) and (hour < uv_off_hour):
+    cycleSanitizer(True) # Turn on LED relay
+  else:
+    cycleSanitizer(False) # Turn off LED relay
+
+  writeToLCD(temp, humidity, IP, nowseconds)
+  sleep(10)
