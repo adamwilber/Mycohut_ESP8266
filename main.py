@@ -34,6 +34,7 @@ uv_off_hour = 11
 ### Some delay to allow aquisition of IP
 sleep(10)
 
+### Initializes the lists used for data logging
 humidityLog = []
 tempLog = []
 timeLog = []
@@ -42,6 +43,8 @@ fogStatusLog = []
 LEDStatusLog = []
 UVStatusLog = []
 
+### Initializes the booleans used for cycling the hardware as well as 
+### reaching out for NTP
 hasNTP = False
 fogStatus = False
 lightStatus = False
@@ -69,10 +72,12 @@ uv_relay = Pin(12, Pin.OUT)
 ### ESP32 Pin assignment
 i2c = I2C(scl=Pin(5), sda=Pin(4))
 
+### Sets the width and height of the LCD and initializes the object
 oled_width = 128
 oled_height = 64
 oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
+### Attempts to get network time, sets the flag for this to not run on every clock cycle if succcessful
 def getNetworkTime():
       # Get current time from internet
   try:
@@ -81,11 +86,14 @@ def getNetworkTime():
   except Exception as e:
     print('error setting time')
 
+### formats the time and returns the current hour
 def getTime():
   global nowseconds
   # Unpack time into variables
   year, month, day, hour, minute, second, ms, dayinyear = utime.gmtime(time.time() + time_offset)
 
+  ### If the current hour is evenly divisible by 4 and is within the first 15 seconds of the hour,
+  ### sets up for the next cycle to renew NTP
   if ( hour mod 4 == 0 ) and ( minute < 1 ) and ( second < 15 ):
     hasNTP = False
 
@@ -97,6 +105,7 @@ def getTime():
   timeLog.append(nowseconds)
   return hour
 
+### Reads information from the sensor and adds the information to the log
 def readSensor():
   global temp
   global humidity
@@ -107,6 +116,7 @@ def readSensor():
   tempLog.append(temp)
   humidityLog.append(humidity)
 
+### Cycles the fan and fog relay
 def cycleHumidifier(status):
   global fog_relay
   global fan_relay
@@ -117,6 +127,7 @@ def cycleHumidifier(status):
     fog_relay.value(1)  # Turn off fog relay
     fan_relay.value(1)  # Turn off fan relay
 
+### Cycles the UV light
 def cycleSanitizer(status):
   global uv_relay
   ### Turn lights on or off based on time set above
@@ -125,6 +136,7 @@ def cycleSanitizer(status):
   else:
     uv_relay.value(1) # Turn off LED relay
 
+### Cycles the lighting system
 def cycleLights(status):
   global led_relay
   if(status):
@@ -132,7 +144,7 @@ def cycleLights(status):
   else:
     led_relay.value(1)
 
-
+### Writes information to the LC
 def writeToLCD(temp, hum, addr, time):
   ### Display info on OLED screen
   oled.fill(0)
@@ -144,6 +156,9 @@ def writeToLCD(temp, hum, addr, time):
   oled.text('Time: {}'.format(time), 0, 50)
   oled.show()
 
+### Purges the logs
+### Need to dream up the logic to dump all but the last 10 or so,
+### depending on the amount of memory used by the lists
 def purgeLogs():
   humidityLog = []
   tempLog = []
@@ -155,43 +170,63 @@ def purgeLogs():
 
 ### Main loop
 while 1 == 1:
+
+  ### If NTP failed or is out of date, attempts the NTP pull again
   if not hasNTP:
     getNetowrkTime()
 
+  ### Call the method to retreive the time from the system and format the output, 
+  ### receives the current hour into a global variable
   hour = getTime()
+
+  ### Call the method to read the sensor
   readSensor()
 
   ### Turn on and off fog relay based on humidity
   if (humidity >= set_high_hum) and not (fogStatus):
     fogStatus = True
     cycleHumidifier(fogStatus)
-  if (humidity <= set_low_hum) and (fogStatus:
+  if (humidity <= set_low_hum) and (fogStatus):
     fogStatus = False
     cycleHumidifier(fogStatus)
 
   ### Turn lights on or off based on time set above
-  if (hour >= lights_on_hour) and (hour < lights_off_hour) and not lightStatus:
+  ### If it is after the hour to turn on the lights and before the hour to turn them off,
+  ### and not already running the lights, cycles the lights on
+  if (hour >= lights_on_hour) and (hour < lights_off_hour) and not (lightStatus):
     lightStatus = True
     cycleLights(lightStatus)
-  else if (hour <= lights_on_hour) and (hour > lights_off_hour) and lightStatus:
+  ### If it is before the hour to turn on the lights and after the hour to turn them off,
+  ### and already running the lights, cycles them off
+  else if (hour <= lights_on_hour) and (hour > lights_off_hour) and (lightStatus):
     lightStatus = False
     cycleLights(lightStatus)
 
   ### Turn UV sterilizer on or off based on time set above
-  if (hour >= uv_on_hour) and (hour < uv_off_hour) and not UVStatus:
+  ### If it is after the hour to turn on the sanitizer and before the time to turn it off,
+  ### and not already running the sanitizer, cycles it on
+  if (hour >= uv_on_hour) and (hour < uv_off_hour) and not (UVStatus):
     UVStatus = True
-    cycleSanitizer(UVStatus) # Turn on LED relay
-  else if (hour <= uv_on_hour) and (hour > uv_off_hour) and UVStatus:
+    cycleSanitizer(UVStatus)
+  ### If it is before the hour to turn on the sanitizer and after the time to turn it off,
+  ### and is currently running the sanitizer, cycles it off
+  else if (hour <= uv_on_hour) and (hour > uv_off_hour) and (UVStatus):
     UVStatus = False
-    cycleSanitizer(UVStatus) # Turn off LED relay
+    cycleSanitizer(UVStatus)
 
-    fogStatusLog.append(fogStatus)
-    lightStatusLog.append(lightStatus)
-    UVStatusLog.append(UVStatus)
+  ### Logs the status of the fogger, lights, and sanitizer
+  fogStatusLog.append(fogStatus)
+  lightStatusLog.append(lightStatus)
+  UVStatusLog.append(UVStatus)
 
+  ### If the logs get longer than 50 entries, calls the purge method
   if (len(timeLog) > 50):
     purgeLogs()
 
+  ### Calls the method to write information to the LED
   writeToLCD(temp, humidity, IP, nowseconds)
+
+  ### Delays for 10 seconds, making the loop run six times per minute.
+  ### Can be adjusted if moving the NTP to a separate bit of logic helps with latency on the controller.
   sleep(10)
 
