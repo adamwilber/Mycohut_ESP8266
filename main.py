@@ -34,6 +34,15 @@ uv_off_hour = 11
 ### Some delay to allow aquisition of IP
 sleep(10)
 
+humidityLog = []
+tempLog = []
+timeLog = []
+fanStatusLog = []
+fogStatusLog = []
+LEDStatusLog = []
+UVStatusLog = []
+
+
 ### Get IP address and set to variable
 sta_if = network.WLAN(network.STA_IF)
 IP = sta_if.ifconfig()[0]
@@ -111,7 +120,7 @@ def cycleLights(status):
     led_relay.value(1)
 
 
-def writeToLCD(tmep, hum, addr, time):
+def writeToLCD(temp, hum, addr, time):
   ### Display info on OLED screen
   oled.fill(0)
   oled.show()
@@ -135,7 +144,7 @@ while 1 == 1:
 
   ### Turn lights on or off based on time set above
   if (hour >= lights_on_hour) and (hour < lights_off_hour):
-        cycleLights(True)
+    cycleLights(True)
   else:
     cycleLights(False)
 
@@ -147,3 +156,4 @@ while 1 == 1:
 
   writeToLCD(temp, humidity, IP, nowseconds)
   sleep(10)
+
