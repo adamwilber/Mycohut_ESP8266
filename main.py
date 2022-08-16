@@ -42,6 +42,7 @@ fogStatusLog = []
 LEDStatusLog = []
 UVStatusLog = []
 
+hasNTP = False
 fogStatus = False
 lightStatus = False
 UVStatus = False
@@ -72,18 +73,24 @@ oled_width = 128
 oled_height = 64
 oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
 
-def getTime():
-  global nowseconds
-    # Get current time from internet
+def getNetworkTime():
+      # Get current time from internet
   try:
     ntptime.settime()
+    hasNTP = True
   except Exception as e:
     print('error setting time')
 
+def getTime():
+  global nowseconds
   # Unpack time into variables
   year, month, day, hour, minute, second, ms, dayinyear = utime.gmtime(time.time() + time_offset)
+
+  if ( hour mod 4 == 0 ) and ( minute < 1 ) and ( second < 15 ):
+    hasNTP = False
+
   ###print(hour,minute)  ### for testing, can remove
-    ### Formatting correction for display
+  ### Formatting correction for display
   if len(str(minute)) == 1:
     minute = "0" + str(minute)
   nowseconds = str(hour) + ":" + str(minute) + ":" + str(second)
@@ -106,32 +113,24 @@ def cycleHumidifier(status):
   if(status):
     fog_relay.value(0) # Turn on fog relay
     fan_relay.value(0) # Turn on fan relay
-    fanStatusLog.append(True)
-    fogStatusLog.append(True)
   else:
     fog_relay.value(1)  # Turn off fog relay
     fan_relay.value(1)  # Turn off fan relay
-    fanStatusLog.append(False)
-    fogStatusLog.append(False)
 
 def cycleSanitizer(status):
   global uv_relay
   ### Turn lights on or off based on time set above
   if(status):
     uv_relay.value(0) # Turn on LED relay
-    UVStatusLog.append(True)
   else:
     uv_relay.value(1) # Turn off LED relay
-    UVStatusLog.append(False)
 
 def cycleLights(status):
   global led_relay
   if(status):
     led_relay.value(0)
-    LEDStatusLog.append(True)
   else:
     led_relay.value(1)
-    LEDStatusLog.append(False)
 
 
 def writeToLCD(temp, hum, addr, time):
@@ -156,25 +155,39 @@ def purgeLogs():
 
 ### Main loop
 while 1 == 1:
+  if not hasNTP:
+    getNetowrkTime()
+
   hour = getTime()
   readSensor()
+
   ### Turn on and off fog relay based on humidity
   if (humidity >= set_high_hum) and not (fogStatus):
-    cycleHumidifier(True)
+    fogStatus = True
+    cycleHumidifier(fogStatus)
   if (humidity <= set_low_hum) and (fogStatus:
-    cycleHumidifier(False)
+    fogStatus = False
+    cycleHumidifier(fogStatus)
 
   ### Turn lights on or off based on time set above
   if (hour >= lights_on_hour) and (hour < lights_off_hour) and not lightStatus:
-    cycleLights(True)
+    lightStatus = True
+    cycleLights(lightStatus)
   else if (hour <= lights_on_hour) and (hour > lights_off_hour) and lightStatus:
-    cycleLights(False)
+    lightStatus = False
+    cycleLights(lightStatus)
 
   ### Turn UV sterilizer on or off based on time set above
   if (hour >= uv_on_hour) and (hour < uv_off_hour) and not UVStatus:
-    cycleSanitizer(True) # Turn on LED relay
+    UVStatus = True
+    cycleSanitizer(UVStatus) # Turn on LED relay
   else if (hour <= uv_on_hour) and (hour > uv_off_hour) and UVStatus:
-    cycleSanitizer(False) # Turn off LED relay
+    UVStatus = False
+    cycleSanitizer(UVStatus) # Turn off LED relay
+
+    fogStatusLog.append(fogStatus)
+    lightStatusLog.append(lightStatus)
+    UVStatusLog.append(UVStatus)
 
   if (len(timeLog) > 50):
     purgeLogs()
